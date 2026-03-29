@@ -1,0 +1,1229 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Arboryx</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<style>
+:root{
+  --green:#34c759;
+  --green-dark:#1fa34a;
+  --green-soft:#e9f9ee;
+  --bg:#f5f5f7;
+  --card:#ffffff;
+  --text:#1d1d1f;
+  --muted:#6e6e73;
+  --border:#dcdce1;
+  --shadow:0 8px 24px rgba(0,0,0,.06);
+  --radius:18px;
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",Arial,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+}
+
+header{
+  position:sticky;
+  top:0;
+  z-index:1000;
+  background:rgba(255,255,255,.9);
+  backdrop-filter:blur(12px);
+  border-bottom:1px solid #ececf1;
+}
+
+.topbar{
+  max-width:1200px;
+  margin:0 auto;
+  padding:14px 16px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+}
+
+.brand{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  font-weight:700;
+  font-size:22px;
+  color:var(--green-dark);
+}
+
+.brand-badge{
+  width:38px;
+  height:38px;
+  border-radius:12px;
+  background:linear-gradient(180deg,var(--green),var(--green-dark));
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:#fff;
+  font-size:20px;
+}
+
+nav{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+nav button{
+  border:none;
+  background:#fff;
+  color:var(--text);
+  padding:10px 16px;
+  border-radius:999px;
+  font-weight:600;
+  cursor:pointer;
+  border:1px solid var(--border);
+  transition:.2s ease;
+}
+
+nav button.active,
+nav button:hover{
+  background:var(--green);
+  color:#fff;
+  border-color:var(--green);
+}
+
+main{
+  max-width:1200px;
+  margin:0 auto;
+  padding:22px 16px 40px;
+}
+
+.page{
+  display:none;
+}
+
+.page.active{
+  display:block;
+}
+
+.hero{
+  background:linear-gradient(135deg,#fafffb 0%, #eaf9ef 100%);
+  border:1px solid #dff2e5;
+  border-radius:28px;
+  box-shadow:var(--shadow);
+  padding:28px;
+  margin-bottom:18px;
+}
+
+.hero h1{
+  margin:0 0 10px;
+  font-size:34px;
+  line-height:1.1;
+}
+
+.hero p{
+  margin:0;
+  color:var(--muted);
+  font-size:17px;
+}
+
+.grid{
+  display:grid;
+  grid-template-columns:1.1fr .9fr;
+  gap:18px;
+}
+
+.grid-3{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:12px;
+}
+
+.grid-2{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+}
+
+.card{
+  background:var(--card);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  padding:18px;
+  border:1px solid #ececf1;
+  margin-bottom:18px;
+}
+
+.card h2,
+.card h3{
+  margin-top:0;
+  margin-bottom:12px;
+}
+
+.soft{
+  background:var(--green-soft);
+  border:1px solid #d6f0dd;
+}
+
+label{
+  display:block;
+  font-weight:600;
+  margin-top:12px;
+  margin-bottom:6px;
+}
+
+input,select,textarea,button{
+  font:inherit;
+}
+
+input,select,textarea{
+  width:100%;
+  padding:13px 14px;
+  border-radius:14px;
+  border:1px solid var(--border);
+  background:#fff;
+  color:var(--text);
+  outline:none;
+}
+
+input:focus,select:focus,textarea:focus{
+  border-color:var(--green);
+  box-shadow:0 0 0 4px rgba(52,199,89,.12);
+}
+
+textarea{
+  resize:vertical;
+  min-height:110px;
+}
+
+button.primary,
+button.secondary,
+button.danger{
+  width:100%;
+  padding:13px 16px;
+  border:none;
+  border-radius:14px;
+  cursor:pointer;
+  font-weight:700;
+  transition:.2s ease;
+}
+
+button.primary{
+  background:var(--green);
+  color:#fff;
+}
+button.primary:hover{
+  background:var(--green-dark);
+}
+button.secondary{
+  background:#eef0f3;
+  color:var(--text);
+}
+button.secondary:hover{
+  background:#e3e5e9;
+}
+button.danger{
+  background:#ff3b30;
+  color:#fff;
+}
+button.danger:hover{
+  filter:brightness(.95);
+}
+
+.actions{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:12px;
+  margin-top:14px;
+}
+
+.result{
+  margin-top:14px;
+  background:linear-gradient(180deg,#f0fff4,#e8f9ee);
+  border:2px solid #cdeed7;
+  border-radius:18px;
+  padding:18px;
+  text-align:center;
+  font-size:28px;
+  font-weight:800;
+  color:var(--green-dark);
+}
+
+.subresult{
+  margin-top:12px;
+  background:#fafafa;
+  border:1px solid #e8e8ed;
+  border-radius:16px;
+  padding:14px;
+  line-height:1.7;
+}
+
+.list{
+  margin:0;
+  padding-left:18px;
+  line-height:1.8;
+  color:var(--muted);
+}
+
+.step{
+  display:flex;
+  gap:12px;
+  margin-bottom:16px;
+  align-items:flex-start;
+}
+
+.step-num{
+  min-width:34px;
+  height:34px;
+  border-radius:50%;
+  background:var(--green);
+  color:#fff;
+  font-weight:700;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+canvas{
+  width:100%;
+  height:180px;
+  border:1px solid var(--border);
+  border-radius:16px;
+  background:#fff;
+  touch-action:none;
+  display:block;
+}
+
+#map{
+  height:320px;
+  border-radius:18px;
+  overflow:hidden;
+  border:1px solid var(--border);
+  margin-top:12px;
+}
+
+.preview-images{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  margin-top:10px;
+}
+
+.preview-images img{
+  width:100px;
+  height:100px;
+  object-fit:cover;
+  border-radius:12px;
+  border:1px solid var(--border);
+}
+
+.hidden{
+  display:none;
+}
+
+.kpi{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+}
+
+.kpi .box{
+  background:#fff;
+  border:1px solid #ececf1;
+  border-radius:16px;
+  padding:16px;
+}
+
+.kpi .box strong{
+  display:block;
+  font-size:22px;
+  margin-bottom:6px;
+  color:var(--green-dark);
+}
+
+.table-note{
+  font-size:14px;
+  color:var(--muted);
+  margin-top:8px;
+}
+
+footer{
+  text-align:center;
+  color:var(--muted);
+  padding:20px 12px 40px;
+  font-size:14px;
+}
+
+@media (max-width:900px){
+  .grid,.grid-2,.grid-3,.actions,.kpi{
+    grid-template-columns:1fr;
+  }
+  .hero h1{
+    font-size:28px;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-badge">🌳</div>
+      <div>Arboryx</div>
+    </div>
+    <nav>
+      <button class="nav-btn active" data-page="apropos">À propos</button>
+      <button class="nav-btn" data-page="tuto">Tutoriel</button>
+      <button class="nav-btn" data-page="calcul">Calcul / Envoi</button>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+  <section id="apropos" class="page active">
+    <div class="hero">
+      <h1>Évalue tes arbres simplement avec Arboryx</h1>
+      <p>Un outil d’expertise pour estimer la valeur d’agrément d’un arbre, générer un PDF professionnel, localiser le sujet sur une carte et envoyer automatiquement le résultat par email.</p>
+    </div>
+
+    <div class="grid">
+      <div>
+        <div class="card">
+          <h2>À propos</h2>
+          <p>Arboryx est un outil pensé pour les professionnels du paysage, de l’arboriculture et de l’expertise. Il permet de calculer une valeur d’agrément à partir de la formule :</p>
+          <div class="subresult"><strong>VA = Vb × S × E × L</strong></div>
+          <ul class="list">
+            <li><strong>Vb</strong> = valeur de base</li>
+            <li><strong>S</strong> = coefficient sanitaire</li>
+            <li><strong>E</strong> = coefficient esthétique</li>
+            <li><strong>L</strong> = coefficient de localisation</li>
+          </ul>
+        </div>
+
+        <div class="card soft">
+          <h2>Ce que fait le site</h2>
+          <ul class="list">
+            <li>Calcul de la valeur d’agrément</li>
+            <li>Choix de la méthode de valeur de base</li>
+            <li>Génération d’un PDF détaillé et stylé</li>
+            <li>Ajout de dégâts et de photos</li>
+            <li>Signature client</li>
+            <li>Envoi au client + copie à toi</li>
+            <li>Localisation sur carte</li>
+          </ul>
+        </div>
+      </div>
+
+      <div>
+        <div class="card">
+          <h2>Pourquoi Arboryx</h2>
+          <div class="kpi">
+            <div class="box">
+              <strong>Rapide</strong>
+              Création de fiche en quelques minutes.
+            </div>
+            <div class="box">
+              <strong>Pro</strong>
+              PDF clair, détaillé et présentable à un client.
+            </div>
+            <div class="box">
+              <strong>Mobile</strong>
+              Utilisable facilement sur téléphone et tablette.
+            </div>
+            <div class="box">
+              <strong>Pratique</strong>
+              Envoi par email sans ressaisie.
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Méthode de calcul utilisée</h2>
+          <p class="table-note">
+            Coefficients utilisés :
+          </p>
+          <ul class="list">
+            <li>S : 1.0 / 0.8 / 0.6 / 0.4 / 0.2</li>
+            <li>E : 1.5 / 1.0 / 0.8 / 0.6 / 0.4</li>
+            <li>L : 1.5 / 1.2 / 1.0 / 0.8 / 0.5</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="tuto" class="page">
+    <div class="hero">
+      <h1>Tutoriel d’utilisation</h1>
+      <p>Voici comment utiliser Arboryx étape par étape.</p>
+    </div>
+
+    <div class="card">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div>
+          <h3>Renseigne le client</h3>
+          <p>Entre le nom du client, son email et son adresse complète.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">2</div>
+        <div>
+          <h3>Place l’arbre sur la carte</h3>
+          <p>Clique sur “Placer sur la carte” pour localiser l’adresse.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">3</div>
+        <div>
+          <h3>Renseigne les caractéristiques de l’arbre</h3>
+          <p>Indique l’espèce, le diamètre du tronc, la méthode pour Vb et les coefficients S, E et L.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">4</div>
+        <div>
+          <h3>Ajoute les dégâts éventuels</h3>
+          <p>Si l’arbre a subi des dégâts, décris-les et ajoute des photos.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">5</div>
+        <div>
+          <h3>Fais signer le client</h3>
+          <p>Le client peut signer directement sur l’écran.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">6</div>
+        <div>
+          <h3>Génère le PDF ou envoie le résultat</h3>
+          <p>Tu peux générer un PDF détaillé ou envoyer le résultat par email au client avec copie pour toi.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="calcul" class="page">
+    <div class="card">
+      <h2>Informations client</h2>
+
+      <div class="grid-2">
+        <div>
+          <label for="client">Nom du client</label>
+          <input id="client" placeholder="Nom client">
+        </div>
+        <div>
+          <label for="emailClient">Email du client</label>
+          <input id="emailClient" type="email" placeholder="email@exemple.com">
+        </div>
+      </div>
+
+      <label for="adresse">Adresse</label>
+      <input id="adresse" placeholder="Adresse complète">
+
+      <div class="actions">
+        <button type="button" class="primary" onclick="localiser()">Placer sur la carte</button>
+        <button type="button" class="secondary" onclick="centrerCarte()">Recentrer</button>
+        <button type="button" class="secondary" onclick="majResume()">Mettre à jour le résumé</button>
+      </div>
+
+      <div id="map"></div>
+    </div>
+
+    <div class="card">
+      <h2>Arbre et méthode de calcul</h2>
+
+      <div class="grid-2">
+        <div>
+          <label for="espece">Espèce de l’arbre</label>
+          <input id="espece" placeholder="Ex : chêne, hêtre, platane...">
+        </div>
+        <div>
+          <label for="diametre">Diamètre du tronc (cm)</label>
+          <input id="diametre" type="number" placeholder="Ex : 30" oninput="majBaseInfo()">
+        </div>
+      </div>
+
+      <label for="modeBase">Méthode pour la valeur de base Vb</label>
+      <select id="modeBase" onchange="toggleModeBase(); majBaseInfo();">
+        <option value="bareme">Barème diamètre</option>
+        <option value="formule">Formule : prix unitaire × surface du tronc</option>
+      </select>
+
+      <div id="blocBareme" class="subresult">
+        <strong>Barème utilisé :</strong><br>
+        10 cm = 100 €<br>
+        20 cm = 400 €<br>
+        30 cm = 900 €<br>
+        40 cm = 1600 €<br>
+        50 cm = 2500 €
+        <div class="table-note">Interpolation automatique entre les valeurs intermédiaires.</div>
+      </div>
+
+      <div id="blocFormule" class="hidden">
+        <label for="prixUnitaire">Prix unitaire</label>
+        <input id="prixUnitaire" type="number" placeholder="Ex : 2.5" oninput="majBaseInfo()">
+        <div class="table-note">Surface du tronc = π × (diamètre / 2)²</div>
+      </div>
+
+      <div class="grid-3">
+        <div>
+          <label for="coefS">Coefficient sanitaire S</label>
+          <select id="coefS" onchange="majResume()">
+            <option value="1">1.0 — Excellent</option>
+            <option value="0.8">0.8 — Bon</option>
+            <option value="0.6">0.6 — Moyen</option>
+            <option value="0.4">0.4 — Mauvais</option>
+            <option value="0.2">0.2 — Très mauvais</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="coefE">Coefficient esthétique E</label>
+          <select id="coefE" onchange="majResume()">
+            <option value="1.5">1.5 — Remarquable</option>
+            <option value="1">1.0 — Bon</option>
+            <option value="0.8">0.8 — Moyen</option>
+            <option value="0.6">0.6 — Faible</option>
+            <option value="0.4">0.4 — Très faible</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="coefL">Coefficient de localisation L</label>
+          <select id="coefL" onchange="majResume()">
+            <option value="1.5">1.5 — Très forte valeur</option>
+            <option value="1.2">1.2 — Forte valeur</option>
+            <option value="1">1.0 — Standard</option>
+            <option value="0.8">0.8 — Faible</option>
+            <option value="0.5">0.5 — Très faible</option>
+          </select>
+        </div>
+      </div>
+
+      <label for="commentaireArbre">Justification technique / expertise</label>
+      <textarea id="commentaireArbre" placeholder="Justification des coefficients, état du sujet, contexte paysager..."></textarea>
+
+      <button type="button" class="primary" onclick="calculer()">Calculer la valeur</button>
+
+      <div class="result" id="resultat">Valeur d’agrément : 0 €</div>
+      <div class="subresult" id="detailCalcul"></div>
+    </div>
+
+    <div class="card">
+      <h2>Dégâts causés par l’homme</h2>
+
+      <label for="degats">Présence de dégâts</label>
+      <select id="degats" onchange="toggleDegats(); majResume();">
+        <option value="Non">Non</option>
+        <option value="Oui">Oui</option>
+      </select>
+
+      <div id="blocDegats" class="hidden">
+        <label for="desc">Description des dégâts</label>
+        <textarea id="desc" placeholder="Décrire les dégâts observés..."></textarea>
+
+        <label for="photos">Photos des dégâts</label>
+        <input type="file" id="photos" multiple accept="image/*">
+        <div class="preview-images" id="previewDegats"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Signature client</h2>
+      <canvas id="signature"></canvas>
+
+      <div class="actions">
+        <button type="button" class="danger" onclick="clearSig()">Effacer la signature</button>
+        <button type="button" class="secondary" onclick="pdf()">Générer PDF</button>
+        <button type="button" class="primary" onclick="envoyer()">Envoyer par email</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Résumé</h2>
+      <div id="resumeFiche" class="subresult"></div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  Arboryx — outil d’évaluation d’arbre d’agrément
+</footer>
+
+<script>
+emailjs.init({ publicKey: "EanO7ShNcITXztVUb" });
+
+const EMAIL_SERVICE_ID = "service_ba9n5xg";
+const EMAIL_TEMPLATE_ID = "template_abl2oy6";
+const EMAIL_PRO = "arboryx1@gmail.com";
+
+// Navigation
+document.querySelectorAll(".nav-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById(btn.dataset.page).classList.add("active");
+    setTimeout(() => {
+      if (map) map.invalidateSize();
+    }, 250);
+  });
+});
+
+// Carte
+let map = L.map('map').setView([46.603354, 1.888334], 6);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; OpenStreetMap contributors',
+  maxZoom: 19
+}).addTo(map);
+let marker = null;
+setTimeout(() => map.invalidateSize(), 500);
+
+function centrerCarte() {
+  map.setView([46.603354, 1.888334], 6);
+  setTimeout(() => map.invalidateSize(), 250);
+}
+
+async function localiser() {
+  const adr = document.getElementById("adresse").value.trim();
+  const nomClient = document.getElementById("client").value.trim() || "Fiche arbre";
+
+  if (!adr) {
+    alert("Veuillez saisir une adresse.");
+    return;
+  }
+
+  try {
+    const res = await fetch("https://nominatim.openstreetmap.org/search?format=json&limit=1&q=" + encodeURIComponent(adr));
+    const data = await res.json();
+
+    if (!data.length) {
+      alert("Adresse introuvable.");
+      return;
+    }
+
+    const lat = parseFloat(data[0].lat);
+    const lon = parseFloat(data[0].lon);
+
+    map.setView([lat, lon], 17);
+
+    if (marker) map.removeLayer(marker);
+
+    marker = L.marker([lat, lon]).addTo(map)
+      .bindPopup("<b>" + escapeHtml(nomClient) + "</b><br>" + escapeHtml(adr));
+
+    setTimeout(() => map.invalidateSize(), 250);
+  } catch (e) {
+    console.error(e);
+    alert("Erreur lors de la localisation.");
+  }
+}
+
+// Forme
+function toggleModeBase() {
+  const mode = document.getElementById("modeBase").value;
+  document.getElementById("blocBareme").classList.toggle("hidden", mode !== "bareme");
+  document.getElementById("blocFormule").classList.toggle("hidden", mode !== "formule");
+}
+
+function toggleDegats() {
+  const hasDegats = document.getElementById("degats").value === "Oui";
+  document.getElementById("blocDegats").classList.toggle("hidden", !hasDegats);
+}
+
+document.getElementById("photos").addEventListener("change", function() {
+  const preview = document.getElementById("previewDegats");
+  preview.innerHTML = "";
+  Array.from(this.files).forEach(file => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = document.createElement("img");
+      img.src = e.target.result;
+      preview.appendChild(img);
+    };
+    reader.readAsDataURL(file);
+  });
+});
+
+// Calcul
+function surfaceTroncCm2(diametreCm) {
+  if (!diametreCm || diametreCm <= 0) return 0;
+  return Math.PI * Math.pow(diametreCm / 2, 2);
+}
+
+function interpolationBareme(d) {
+  const points = [
+    { d: 10, v: 100 },
+    { d: 20, v: 400 },
+    { d: 30, v: 900 },
+    { d: 40, v: 1600 },
+    { d: 50, v: 2500 }
+  ];
+
+  if (!d || d <= 0) return 0;
+  if (d <= 10) return 100;
+
+  for (let i = 0; i < points.length - 1; i++) {
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    if (d === p1.d) return p1.v;
+    if (d > p1.d && d <= p2.d) {
+      const ratio = (d - p1.d) / (p2.d - p1.d);
+      return p1.v + ratio * (p2.v - p1.v);
+    }
+  }
+
+  if (d > 50) {
+    const dernier = points[points.length - 1];
+    const precedent = points[points.length - 2];
+    const pente = (dernier.v - precedent.v) / (dernier.d - precedent.d);
+    return dernier.v + (d - dernier.d) * pente;
+  }
+
+  return 0;
+}
+
+function calculValeurBase() {
+  const mode = document.getElementById("modeBase").value;
+  const diametre = parseFloat(document.getElementById("diametre").value) || 0;
+  const surface = surfaceTroncCm2(diametre);
+
+  let vb = 0;
+  let explication = "";
+
+  if (mode === "bareme") {
+    vb = interpolationBareme(diametre);
+    explication = "Barème diamètre";
+  } else {
+    const prixUnitaire = parseFloat(document.getElementById("prixUnitaire").value) || 0;
+    vb = prixUnitaire * surface;
+    explication = "Prix unitaire × surface du tronc";
+  }
+
+  return {
+    vb: Math.round(vb),
+    surface: surface,
+    explication
+  };
+}
+
+function majBaseInfo() {
+  majResume();
+}
+
+let valeurGlobale = 0;
+
+function calculer() {
+  const s = parseFloat(document.getElementById("coefS").value) || 0;
+  const e = parseFloat(document.getElementById("coefE").value) || 0;
+  const l = parseFloat(document.getElementById("coefL").value) || 0;
+  const base = calculValeurBase();
+
+  valeurGlobale = Math.round(base.vb * s * e * l);
+
+  document.getElementById("resultat").innerHTML = "Valeur d’agrément : " + valeurGlobale + " €";
+
+  document.getElementById("detailCalcul").innerHTML =
+    "<strong>Détail du calcul</strong><br>" +
+    "Méthode Vb : " + base.explication + "<br>" +
+    "Surface du tronc : " + base.surface.toFixed(2) + " cm²<br>" +
+    "Valeur de base Vb : " + base.vb + " €<br>" +
+    "Coefficient sanitaire S : " + s + "<br>" +
+    "Coefficient esthétique E : " + e + "<br>" +
+    "Coefficient de localisation L : " + l + "<br><br>" +
+    "<strong>Formule :</strong> VA = Vb × S × E × L<br>" +
+    "<strong>Calcul :</strong> " + base.vb + " × " + s + " × " + e + " × " + l + " = " + valeurGlobale + " €";
+
+  majResume();
+}
+
+function selectText(selectId) {
+  const el = document.getElementById(selectId);
+  return el.options[el.selectedIndex]?.text || "";
+}
+
+function valeurOuTiret(id) {
+  return document.getElementById(id).value || "-";
+}
+
+function majResume() {
+  const base = calculValeurBase();
+  const html =
+    "<strong>Client :</strong> " + valeurOuTiret("client") + "<br>" +
+    "<strong>Email client :</strong> " + valeurOuTiret("emailClient") + "<br>" +
+    "<strong>Adresse :</strong> " + valeurOuTiret("adresse") + "<br>" +
+    "<strong>Espèce :</strong> " + valeurOuTiret("espece") + "<br>" +
+    "<strong>Diamètre :</strong> " + valeurOuTiret("diametre") + " cm<br>" +
+    "<strong>Méthode Vb :</strong> " + base.explication + "<br>" +
+    "<strong>Valeur de base :</strong> " + base.vb + " €<br>" +
+    "<strong>Surface du tronc :</strong> " + base.surface.toFixed(2) + " cm²<br>" +
+    "<strong>Sanitaire S :</strong> " + selectText("coefS") + "<br>" +
+    "<strong>Esthétique E :</strong> " + selectText("coefE") + "<br>" +
+    "<strong>Localisation L :</strong> " + selectText("coefL") + "<br>" +
+    "<strong>Dégâts :</strong> " + document.getElementById("degats").value + "<br>" +
+    "<strong>Description des dégâts :</strong> " + (document.getElementById("desc").value || "-") + "<br>" +
+    "<strong>Justification :</strong> " + (document.getElementById("commentaireArbre").value || "-") + "<br>" +
+    "<strong>Valeur finale :</strong> " + valeurGlobale + " €";
+
+  document.getElementById("resumeFiche").innerHTML = html;
+}
+
+function escapeHtml(str) {
+  return String(str)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+// Signature
+const canvas = document.getElementById("signature");
+const ctx = canvas.getContext("2d");
+let drawing = false;
+
+function resizeCanvas() {
+  const rect = canvas.getBoundingClientRect();
+  const ratio = window.devicePixelRatio || 1;
+  const oldData = canvas.toDataURL("image/png");
+  canvas.width = rect.width * ratio;
+  canvas.height = rect.height * ratio;
+  ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+  ctx.lineWidth = 2;
+  ctx.lineCap = "round";
+  ctx.strokeStyle = "#000";
+
+  const img = new Image();
+  img.onload = () => ctx.drawImage(img, 0, 0, rect.width, rect.height);
+  img.src = oldData;
+}
+
+function getPosMouse(e) {
+  const rect = canvas.getBoundingClientRect();
+  return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+}
+function getPosTouch(e) {
+  const rect = canvas.getBoundingClientRect();
+  return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
+}
+function startDraw(x, y) {
+  drawing = true;
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+}
+function drawLine(x, y) {
+  if (!drawing) return;
+  ctx.lineTo(x, y);
+  ctx.stroke();
+}
+function stopDraw() {
+  drawing = false;
+}
+
+canvas.addEventListener("mousedown", e => {
+  const p = getPosMouse(e);
+  startDraw(p.x, p.y);
+});
+canvas.addEventListener("mousemove", e => {
+  const p = getPosMouse(e);
+  drawLine(p.x, p.y);
+});
+canvas.addEventListener("mouseup", stopDraw);
+canvas.addEventListener("mouseleave", stopDraw);
+
+canvas.addEventListener("touchstart", e => {
+  e.preventDefault();
+  const p = getPosTouch(e);
+  startDraw(p.x, p.y);
+}, { passive: false });
+
+canvas.addEventListener("touchmove", e => {
+  e.preventDefault();
+  const p = getPosTouch(e);
+  drawLine(p.x, p.y);
+}, { passive: false });
+
+canvas.addEventListener("touchend", e => {
+  e.preventDefault();
+  stopDraw();
+}, { passive: false });
+
+function clearSig() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+window.addEventListener("resize", () => {
+  resizeCanvas();
+  setTimeout(() => map.invalidateSize(), 250);
+});
+
+function fileToDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => resolve(e.target.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function drawTable(doc, startX, startY, widths, rows, headerFill=[233,249,238]) {
+  const lineHeight = 8;
+  let y = startY;
+
+  rows.forEach((row, index) => {
+    let x = startX;
+    const isHeader = index === 0;
+
+    if (isHeader) {
+      doc.setFillColor(headerFill[0], headerFill[1], headerFill[2]);
+      doc.rect(startX, y - 5, widths.reduce((a,b)=>a+b,0), lineHeight, "F");
+      doc.setFont("helvetica", "bold");
+    } else {
+      doc.setFont("helvetica", "normal");
+    }
+
+    for (let i = 0; i < row.length; i++) {
+      doc.rect(x, y - 5, widths[i], lineHeight);
+      doc.text(String(row[i]), x + 2, y);
+      x += widths[i];
+    }
+    y += lineHeight;
+  });
+
+  return y + 4;
+}
+
+async function pdf() {
+  calculer();
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const base = calculValeurBase();
+
+  let y = 16;
+
+  doc.setFillColor(52,199,89);
+  doc.rect(0, 0, 210, 24, "F");
+  doc.setTextColor(255,255,255);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(20);
+  doc.text("ARBORYX", 105, 15, null, null, "center");
+
+  y = 32;
+  doc.setTextColor(0,0,0);
+  doc.setFontSize(14);
+  doc.text("Rapport détaillé d’évaluation d’arbre d’agrément", 10, y);
+  y += 10;
+
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "bold");
+  doc.text("1. Informations client", 10, y);
+  y += 6;
+
+  y = drawTable(doc, 10, y, [60, 130], [
+    ["Champ", "Valeur"],
+    ["Client", valeurOuTiret("client")],
+    ["Email client", valeurOuTiret("emailClient")],
+    ["Adresse", valeurOuTiret("adresse")],
+    ["Espèce", valeurOuTiret("espece")],
+    ["Diamètre", valeurOuTiret("diametre") + " cm"]
+  ]);
+
+  doc.setFont("helvetica", "bold");
+  doc.text("2. Valeur de base Vb", 10, y);
+  y += 6;
+
+  let modeDetail = base.explication;
+  if (document.getElementById("modeBase").value === "formule") {
+    modeDetail += " (prix unitaire : " + (document.getElementById("prixUnitaire").value || "0") + ")";
+  }
+
+  y = drawTable(doc, 10, y, [70, 120], [
+    ["Élément", "Détail"],
+    ["Méthode", modeDetail],
+    ["Surface du tronc", base.surface.toFixed(2) + " cm²"],
+    ["Valeur de base Vb", base.vb + " €"]
+  ]);
+
+  doc.setFont("helvetica", "bold");
+  doc.text("3. Coefficients d’expertise", 10, y);
+  y += 6;
+
+  y = drawTable(doc, 10, y, [30, 40, 120], [
+    ["Coef.", "Valeur", "Description"],
+    ["S", document.getElementById("coefS").value, selectText("coefS")],
+    ["E", document.getElementById("coefE").value, selectText("coefE")],
+    ["L", document.getElementById("coefL").value, selectText("coefL")]
+  ]);
+
+  doc.setFont("helvetica", "bold");
+  doc.text("4. Calcul détaillé", 10, y);
+  y += 6;
+
+  y = drawTable(doc, 10, y, [70, 120], [
+    ["Étape", "Valeur"],
+    ["Formule", "VA = Vb × S × E × L"],
+    ["Valeur de base Vb", base.vb + " €"],
+    ["Coefficient S", document.getElementById("coefS").value],
+    ["Coefficient E", document.getElementById("coefE").value],
+    ["Coefficient L", document.getElementById("coefL").value],
+    ["Calcul final", base.vb + " × " + document.getElementById("coefS").value + " × " + document.getElementById("coefE").value + " × " + document.getElementById("coefL").value + " = " + valeurGlobale + " €"]
+  ]);
+
+  doc.setFillColor(233,249,238);
+  doc.setDrawColor(52,199,89);
+  doc.roundedRect(10, y, 190, 16, 3, 3, "FD");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(15);
+  doc.text("Valeur d’agrément retenue : " + valeurGlobale + " €", 105, y + 10, null, null, "center");
+  y += 24;
+
+  doc.setFontSize(12);
+  doc.text("5. Dégâts causés par l’homme", 10, y);
+  y += 6;
+
+  y = drawTable(doc, 10, y, [60, 130], [
+    ["Champ", "Valeur"],
+    ["Présence de dégâts", document.getElementById("degats").value],
+    ["Description", document.getElementById("desc").value || "Aucun dégât signalé"]
+  ]);
+
+  if (y > 220) {
+    doc.addPage();
+    y = 20;
+  }
+
+  doc.setFont("helvetica", "bold");
+  doc.text("6. Justification technique", 10, y);
+  y += 8;
+  doc.setFont("helvetica", "normal");
+  const comm = document.getElementById("commentaireArbre").value || "Aucune justification complémentaire renseignée.";
+  const commLines = doc.splitTextToSize(comm, 180);
+  doc.text(commLines, 10, y);
+  y += commLines.length * 6 + 8;
+
+  if (y > 220) {
+    doc.addPage();
+    y = 20;
+  }
+
+  doc.setFont("helvetica", "bold");
+  doc.text("7. Signature client", 10, y);
+  y += 6;
+  const sign = canvas.toDataURL("image/png");
+  doc.addImage(sign, "PNG", 10, y, 90, 35);
+  y += 45;
+
+  const files = document.getElementById("photos").files;
+  if (files.length > 0 && document.getElementById("degats").value === "Oui") {
+    doc.addPage();
+    let py = 20;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(14);
+    doc.text("8. Annexe photos des dégâts", 10, py);
+    py += 10;
+
+    for (let i = 0; i < files.length; i++) {
+      if (py > 230) {
+        doc.addPage();
+        py = 20;
+      }
+      const imgData = await fileToDataURL(files[i]);
+      doc.addImage(imgData, "JPEG", 10, py, 60, 45);
+      py += 50;
+    }
+  }
+
+  const totalPages = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "italic");
+    doc.text("Document généré par Arboryx — page " + i + "/" + totalPages, 105, 290, null, null, "center");
+  }
+
+  doc.save("rapport_arboryx.pdf");
+}
+
+async function envoyer() {
+  calculer();
+
+  const emailClient = document.getElementById("emailClient").value.trim();
+  if (!emailClient || !emailClient.includes("@") || !emailClient.includes(".")) {
+    alert("Veuillez renseigner un email client valide.");
+    return;
+  }
+
+  const base = calculValeurBase();
+
+  const paramsBase = {
+    client: document.getElementById("client").value || "-",
+    adresse: document.getElementById("adresse").value || "-",
+    espece: document.getElementById("espece").value || "-",
+    diametre: document.getElementById("diametre").value || "-",
+    valeur: valeurGlobale + " €",
+    degats: document.getElementById("degats").value || "Non",
+    description_degats: document.getElementById("desc").value || "-",
+    email_client: emailClient,
+    date_fiche: new Date().toLocaleDateString("fr-FR"),
+    methode_vb: base.explication,
+    valeur_base: base.vb + " €",
+    coefficient_s: document.getElementById("coefS").value,
+    coefficient_e: document.getElementById("coefE").value,
+    coefficient_l: document.getElementById("coefL").value,
+    commentaire: document.getElementById("commentaireArbre").value || "-",
+    surface_tronc: base.surface.toFixed(2) + " cm²",
+    formule_complete:
+      base.vb + " × " +
+      document.getElementById("coefS").value + " × " +
+      document.getElementById("coefE").value + " × " +
+      document.getElementById("coefL").value + " = " +
+      valeurGlobale + " €"
+  };
+
+  try {
+    await emailjs.send(
+      EMAIL_SERVICE_ID,
+      EMAIL_TEMPLATE_ID,
+      { ...paramsBase, to_email: emailClient }
+    );
+
+    await emailjs.send(
+      EMAIL_SERVICE_ID,
+      EMAIL_TEMPLATE_ID,
+      { ...paramsBase, to_email: EMAIL_PRO }
+    );
+
+    alert("Email envoyé au client + copie envoyée à toi.");
+  } catch (e) {
+    console.error(e);
+    alert("Erreur email. Vérifie dans EmailJS que To Email = {{to_email}} et Reply To = {{email_client}}");
+  }
+}
+
+toggleModeBase();
+toggleDegats();
+resizeCanvas();
+calculer();
+majResume();
+</script>
+
+</body>
+</html>
