@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Arboryx</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<style>
+*{box-sizing:border-box}
+body{font-family:Arial,Helvetica,sans-serif;margin:0;background:#f4f6f5;color:#222}
+header{background:#fff;text-align:center;padding:16px 10px;border-bottom:3px solid #2e7d32;box-shadow:0 2px 8px rgba(0,0,0,.05)}
+header h1{margin:0;font-size:28px;color:#2e7d32}
+header p{margin:6px 0 0;color:#666}
+.container{max-width:1100px;margin:0 auto;padding:16px}
+.card{background:#fff;border-radius:12px;padding:16px;margin-bottom:16px;box-shadow:0 2px 10px rgba(0,0,0,.06)}
+h2{margin-top:0;color:#2e7d32}
+label{display:block;font-weight:bold;margin-top:10px;margin-bottom:5px}
+input,select,button,textarea{
+  width:100%;
+  padding:12px;
+  margin:6px 0;
+  border-radius:8px;
+  border:1px solid #cfd8dc;
+  font-size:16px
+}
+textarea{resize:vertical;min-height:100px}
+button{background:#4CAF50;color:#fff;border:none;cursor:pointer;font-weight:bold}
+button:hover{opacity:.96}
+.secondary{background:#607d8b}
+.danger{background:#c62828}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.actions{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+@media (max-width:768px){
+  .grid-2,.grid-3,.actions{grid-template-columns:1fr}
+}
+#map{height:320px;margin-top:10px;border-radius:10px;overflow:hidden;border:1px solid #ddd}
+.result{
+  background:#f1f8e9;border:2px solid #c5e1a5;border-radius:10px;
+  padding:15px;text-align:center;margin-top:10px;font-size:26px;font-weight:bold
+}
+.subresult{
+  background:#fafafa;border:1px solid #ddd;border-radius:10px;
+  padding:14px;margin-top:10px;line-height:1.7
+}
+canvas{
+  width:100%;height:180px;border:1px solid #ccc;background:#fff;
+  border-radius:8px;touch-action:none;display:block
+}
+.hidden{display:none}
+.preview-images{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px}
+.preview-images img{
+  width:100px;height:100px;object-fit:cover;border-radius:8px;border:1px solid #ccc
+}
+.small{font-size:13px;color:#666}
+.info-box{
+  background:#f8fbf8;border-left:4px solid #4CAF50;padding:10px 12px;border-radius:6px;margin-top:8px
+}
+.table-like{
+  width:100%;border-collapse:collapse;margin-top:10px
+}
+.table-like div{
+  display:grid;grid-template-columns:1.5fr 1fr 2fr;
+  border-bottom:1px solid #eee;padding:8px 0
+}
+.table-like .head{font-weight:bold;background:#fafafa;padding:10px 6px;border-radius:6px}
+</style>
+</head>
+
+<body>
+
+<header>
+  <h1>Arboryx</h1>
+  <p>Évaluation d’arbre d’agrément</p>
+</header>
+
+<div class="container">
+
+  <div class="card">
+    <h2>Informations client</h2>
+
+    <div class="grid-2">
+      <div>
+        <label for="client">Nom du client</label>
+        <input id="client" placeholder="Nom client">
+      </div>
+      <div>
+        <label for="emailClient">Email du client</label>
+        <input id="emailClient" type="email" placeholder="email@exemple.com">
+      </div>
+    </div>
+
+    <label for="adresse">Adresse</label>
+    <input id="adresse" placeholder="Adresse complète">
+
+    <div class="actions">
+      <button type="button" onclick="localiser()">Placer sur la carte</button>
+      <button type="button" class="secondary" onclick="centrerCarte()">Recentrer la carte</button>
+      <button type="button" class="secondary" onclick="majResume()">Mettre à jour le résumé</button>
+    </div>
+
+    <div id="map"></div>
+  </div>
+
+  <div class="card">
+    <h2>Arbre et méthode de calcul</h2>
+
+    <div class="grid-2">
+      <div>
+        <label for="espece">Espèce de l’arbre</label>
+        <input id="espece" placeholder="Ex : chêne, hêtre, platane...">
+      </div>
+      <div>
+        <label for="diametre">Diamètre du tronc (cm)</label>
+        <input id="diametre" type="number" placeholder="Ex : 30" oninput="majBaseInfo()">
+      </div>
+    </div>
+
+    <label for="modeBase">Méthode pour la valeur de base Vb</label>
+    <select id="modeBase" onchange="toggleModeBase(); majBaseInfo();">
+      <option value="bareme">Barème diamètre</option>
+      <option value="formule">Formule : prix unitaire × surface du tronc</option>
+    </select>
+
+    <div id="blocBareme" class="info-box">
+      <strong>Barème utilisé :</strong><br>
+      10 cm = 100 €<br>
+      20 cm = 400 €<br>
+      30 cm = 900 €<br>
+      40 cm = 1600 €<br>
+      50 cm = 2500 €<br>
+      <div class="small">Interpolation automatique entre les valeurs intermédiaires.</div>
+    </div>
+
+    <div id="blocFormule" class="hidden">
+      <label for="prixUnitaire">Prix unitaire</label>
+      <input id="prixUnitaire" type="number" placeholder="Ex : 2.5" oninput="majBaseInfo()">
+      <div class="small">Surface du tronc = π × (diamètre / 2)²</div>
+    </div>
+
+    <div class="grid-3">
+      <div>
+        <label for="coefS">Coefficient sanitaire S</label>
+        <select id="coefS" onchange="majResume()">
+          <option value="1">1.0 — Excellent — Arbre sain, vigoureux, aucune maladie</option>
+          <option value="0.8">0.8 — Bon — Légers défauts, petites branches mortes</option>
+          <option value="0.6">0.6 — Moyen — Début de dépérissement, attaques légères</option>
+          <option value="0.4">0.4 — Mauvais — Maladie visible, cavités, structure affaiblie</option>
+          <option value="0.2">0.2 — Très mauvais — Arbre dangereux ou en fin de vie</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="coefE">Coefficient esthétique E</label>
+        <select id="coefE" onchange="majResume()">
+          <option value="1.5">1.5 — Remarquable — Arbre exceptionnel, isolé, espèce noble</option>
+          <option value="1">1.0 — Bon — Belle forme, bien équilibré</option>
+          <option value="0.8">0.8 — Moyen — Forme irrégulière, défauts visibles</option>
+          <option value="0.6">0.6 — Faible — Taille sévère, port dégradé</option>
+          <option value="0.4">0.4 — Très faible — Arbre mutilé ou sans intérêt</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="coefL">Coefficient de localisation L</label>
+        <select id="coefL" onchange="majResume()">
+          <option value="1.5">1.5 — Très forte valeur — Centre-ville, place publique, site classé</option>
+          <option value="1.2">1.2 — Forte valeur — Parc urbain, alignement d’arbres</option>
+          <option value="1">1.0 — Standard — Jardin privé visible</option>
+          <option value="0.8">0.8 — Faible — Terrain privé peu visible</option>
+          <option value="0.5">0.5 — Très faible — Zone rurale isolée</option>
+        </select>
+      </div>
+    </div>
+
+    <label for="commentaireArbre">Justification technique / expertise</label>
+    <textarea id="commentaireArbre" placeholder="Justification des coefficients, état du sujet, contexte paysager..."></textarea>
+
+    <button type="button" onclick="calculer()">Calculer la valeur</button>
+
+    <div class="result" id="resultat">Valeur d’agrément : 0 €</div>
+
+    <div class="subresult" id="detailCalcul"></div>
+  </div>
+
+  <div class="card">
+    <h2>Dégâts causés par l’homme</h2>
+
+    <label for="degats">Présence de dégâts</label>
+    <select id="degats" onchange="toggleDegats(); majResume();">
+      <option value="Non">Non</option>
+      <option value="Oui">Oui</option>
+    </select>
+
+    <div id="blocDegats" class="hidden">
+      <label for="desc">Description des dégâts</label>
+      <textarea id="desc" placeholder="Décrire les dégâts observés..."></textarea>
+
+      <label for="photos">Photos des dégâts</label>
+      <input type="file" id="photos" multiple accept="image/*">
+      <div class="preview-images" id="previewDegats"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Signature client</h2>
+    <canvas id="signature"></canvas>
+
+    <div class="actions">
+      <button type="button" class="danger" onclick="clearSig()">Effacer la signature</button>
+      <button type="button" onclick="pdf()">Générer PDF détaillé</button>
+      <button type="button" onclick="envoyer()">Envoyer au client + copie à moi</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Résumé</h2>
+    <div id="resumeFiche" class="subresult"></div>
+  </div>
+
+</div>
+
+<script>
+emailjs.init({ publicKey: "EanO7ShNcITXztVUb" });
+
+const EMAIL_SERVICE_ID = "service_ba9n5xg";
+const EMAIL_TEMPLATE_ID = "template_abl2oy6";
+const EMAIL_PRO = "arboryx1@gmail.com";
+
+let map = L.map('map').setView([46.603354, 1.888334], 6);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; OpenStreetMap contributors',
+  maxZoom: 19
+}).addTo(map);
+let marker = null;
+
+setTimeout(() => map.invalidateSize(), 500);
+
+function centrerCarte() {
+  map.setView([46.603354, 1.888334], 6);
+  setTimeout(() => map.invalidateSize(), 300);
+}
+
+async function localiser() {
+  const adr = document.getElementById("adresse").value.trim();
+  const nomClient = document.getElementById("client").value.trim() || "Fiche arbre";
+
+  if (!adr) {
+    alert("Veuillez saisir une adresse.");
+    return;
+  }
+
+  try {
+    const res = await fetch("https://nominatim.openstreetmap.org/search?format=json&limit=1&q=" + encodeURIComponent(adr));
+    const data = await res.json();
+
+    if (!data.length) {
+      alert("Adresse introuvable.");
+      return;
+    }
+
+    const lat = parseFloat(data[0].lat);
+    const lon = parseFloat(data[0].lon);
+
+    map.setView([lat, lon], 17);
+
+    if (marker) map.removeLayer(marker);
+
+    marker = L.marker([lat, lon]).addTo(map)
+      .bindPopup("<b>" + escapeHtml(nomClient) + "</b><br>" + escapeHtml(adr));
+
+    setTimeout(() => map.invalidateSize(), 300);
+  } catch (e) {
+    console.error(e);
+    alert("Erreur lors de la localisation.");
+  }
+}
+
+function toggleModeBase() {
+  const mode = document.getElementById("modeBase").value;
+  document.getElementById("blocBareme").classList.toggle("hidden", mode !== "bareme");
+  document.getElementById("blocFormule").classList.toggle("hidden", mode !== "formule");
+}
+
+function toggleDegats() {
+  const hasDegats = document.getElementById("degats").value === "Oui";
+  document.getElementById("blocDegats").classList.toggle("hidden", !hasDegats);
+}
+
+document.getElementById("photos").addEventListener("change", function() {
+  const preview = document.getElementById("previewDegats");
+  preview.innerHTML = "";
+  Array.from(this.files).forEach(file => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = document.createElement("img");
+      img.src = e.target.result;
+      preview.appendChild(img);
+    };
+    reader.readAsDataURL(file);
+  });
+});
+
+function surfaceTroncCm2(diametreCm) {
+  if (!diametreCm || diametreCm <= 0) return 0;
+  return Math.PI * Math.pow(diametreCm / 2, 2);
+}
+
+function interpolationBareme(d) {
+  const points = [
+    { d: 10, v: 100 },
+    { d: 20, v: 400 },
+    { d: 30, v: 900 },
+    { d: 40, v: 1600 },
+    { d: 50, v: 2500 }
+  ];
+
+  if (!d || d <= 0) return 0;
+  if (d <= 10) return 100;
+
+  for (let i = 0; i < points.length - 1; i++) {
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    if (d === p1.d) return p1.v;
+    if (d > p1.d && d <= p2.d) {
+      const ratio = (d - p1.d) / (p2.d - p1.d);
+      return p1.v + ratio * (p2.v - p1.v);
+    }
+  }
+
+  if (d > 50) {
+    const dernier = points[points.length - 1];
+    const precedent = points[points.length - 2];
+    const pente = (dernier.v - precedent.v) / (dernier.d - precedent.d);
+    return dernier.v + (d - dernier.d) * pente;
+  }
+
+  return 0;
+}
+
+function calculValeurBase() {
+  const mode = document.getElementById("modeBase").value;
+  const diametre = parseFloat(document.getElementById("diametre").value) || 0;
+  const surface = surfaceTroncCm2(diametre);
+
+  let vb = 0;
+  let explication = "";
+
+  if (mode === "bareme") {
+    vb = interpolationBareme(diametre);
+    explication = "Barème diamètre";
+  } else {
+    const prixUnitaire = parseFloat(document.getElementById("prixUnitaire").value) || 0;
+    vb = prixUnitaire * surface;
+    explication = "Prix unitaire × surface du tronc";
+  }
+
+  return {
+    vb: Math.round(vb),
+    surface: surface,
+    explication
+  };
+}
+
+function majBaseInfo() {
+  majResume();
+}
+
+let valeurGlobale = 0;
+
+function calculer() {
+  const s = parseFloat(document.getElementById("coefS").value) || 0;
+  const e = parseFloat(document.getElementById("coefE").value) || 0;
+  const l = parseFloat(document.getElementById("coefL").value) || 0;
+  const base = calculValeurBase();
+
+  valeurGlobale = Math.round(base.vb * s * e * l);
+
+  document.getElementById("resultat").innerHTML = "Valeur d’agrément : " + valeurGlobale + " €";
+
+  document.getElementById("detailCalcul").innerHTML =
+    "<strong>Détail du calcul</strong><br>" +
+    "Méthode Vb : " + base.explication + "<br>" +
+    "Surface du tronc : " + base.surface.toFixed(2) + " cm²<br>" +
+    "Valeur de base Vb : " + base.vb + " €<br>" +
+    "Coefficient sanitaire S : " + s + "<br>" +
+    "Coefficient esthétique E : " + e + "<br>" +
+    "Coefficient de localisation L : " + l + "<br><br>" +
+    "<strong>Formule :</strong> VA = Vb × S × E × L<br>" +
+    "<strong>Calcul :</strong> " + base.vb + " × " + s + " × " + e + " × " + l + " = " + valeurGlobale + " €";
+
+  majResume();
+}
+
+function selectText(selectId) {
+  const el = document.getElementById(selectId);
+  return el.options[el.selectedIndex]?.text || "";
+}
+
+function valeurOuTiret(id) {
+  return document.getElementById(id).value || "-";
+}
+
+function majResume() {
+  const base = calculValeurBase();
+  const html =
+    "<strong>Client :</strong> " + valeurOuTiret("client") + "<br>" +
+    "<strong>Email client :</strong> " + valeurOuTiret("emailClient") + "<br>" +
+    "<strong>Adresse :</strong> " + valeurOuTiret("adresse") + "<br>" +
+    "<strong>Espèce :</strong> " + valeurOuTiret("espece") + "<br>" +
+    "<strong>Diamètre :</strong> " + valeurOuTiret("diametre") + " cm<br>" +
+    "<strong>Méthode Vb :</strong> " + base.explication + "<br>" +
+    "<strong>Valeur de base :</strong> " + base.vb + " €<br>" +
+    "<strong>Surface du tronc :</strong> " + base.surface.toFixed(2) + " cm²<br>" +
+    "<strong>Sanitaire S :</strong> " + selectText("coefS") + "<br>" +
+    "<strong>Esthétique E :</strong> " + selectText("coefE") + "<br>" +
+    "<strong>Localisation L :</strong> " + selectText("coefL") + "<br>" +
+    "<strong>Dégâts :</strong> " + document.getElementById("degats").value + "<br>" +
+    "<strong>Description des dégâts :</strong> " + (document.getElementById("desc").value || "-") + "<br>" +
+    "<strong>Justification :</strong> " + (document.getElementById("commentaireArbre").value || "-") + "<br>" +
+    "<strong>Valeur finale :</strong> " + valeurGlobale + " €";
+  document.getElementById("resumeFiche").innerHTML = html;
+}
+
+function escapeHtml(str) {
+  return String(str)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+const canvas = document.getElementById("signature");
+const ctx = canvas.getContext("2d");
+let drawing = false;
+
+function resizeCanvas() {
+  const rect = canvas.getBoundingClientRect();
+  const ratio = window.devicePixelRatio || 1;
+  const oldData = canvas.toDataURL("image/png");
+  canvas.width = rect.width * ratio;
+  canvas.height = rect.height * ratio;
+  ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+  ctx.lineWidth = 2;
+  ctx.lineCap = "round";
+  ctx.strokeStyle = "#000";
+
+  const img = new Image();
+  img.onload = () => ctx.drawImage(img, 0, 0, rect.width, rect.height);
+  img.src = oldData;
+}
+
+function getPosMouse(e) {
+  const rect = canvas.getBoundingClientRect();
+  return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+}
+function getPosTouch(e) {
+  const rect = canvas.getBoundingClientRect();
+  return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
+}
+function startDraw(x, y) {
+  drawing = true;
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+}
+function drawLine(x, y) {
+  if (!drawing) return;
+  ctx.lineTo(x, y);
+  ctx.stroke();
+}
+function stopDraw() {
+  drawing = false;
+}
+
+canvas.addEventListener("mousedown", e => {
+  const p = getPosMouse(e);
+  startDraw(p.x, p.y);
+});
+canvas.addEventListener("mousemove", e => {
+  const p = getPosMouse(e);
+  drawLine(p.x, p.y);
+});
+canvas.addEventListener("mouseup", stopDraw);
+canvas.addEventListener("mouseleave", stopDraw);
+
+canvas.addEventListener("touchstart", e => {
+  e.preventDefault();
+  const p = getPosTouch(e);
+  startDraw(p.x, p.y);
+}, { passive: false });
+
+canvas.addEventListener("touchmove", e => {
+  e.preventDefault();
+  const p = getPosTouch(e);
+  drawLine(p.x, p.y);
+}, { passive: false });
+
+canvas.addEventListener("touchend", e => {
+  e.preventDefault();
+  stopDraw();
+}, { passive: false });
+
+function clearSig() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+window.addEventListener("resize", () => {
+  resizeCanvas();
+  setTimeout(() => map.invalidateSize(), 300);
+});
+
+function fileToDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => resolve(e.target.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function drawTable(doc, startX, startY, widths, rows, headerFill=[240,248,233]) {
+  const lineHeight = 8;
+  let y = startY;
+
+  rows.forEach((row, index) => {
+    let x = startX;
+    const isHeader = index === 0;
+    const rowHeight = lineHeight;
+
+    if (isHeader) {
+      doc.setFillColor(headerFill[0], headerFill[1], headerFill[2]);
+      doc.rect(startX, y - 5, widths.reduce((a,b)=>a+b,0), rowHeight, "F");
+      doc.setFont("helvetica", "bold");
+    } else {
+      doc.setFont("helvetica", "normal");
+    }
+
+    for (let i = 0; i < row.length; i++) {
+      doc.rect(x, y - 5, widths[i], rowHeight);
+      const text = String(row[i]);
+      doc.text(text, x + 2, y);
+      x += widths[i];
+    }
+    y += rowHeight;
+  });
+
+  return y + 4;
+}
+
+async function pdf() {
+  calculer();
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const base = calculValeurBase();
+
+  let y = 16;
+
+  doc.setFillColor(46, 125, 50);
+  doc.rect(0, 0, 210, 24, "F");
+  doc.setTextColor(255,255,255);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(20);
+  doc.text("ARBORYX", 105, 15, null, null, "center");
+
+  y = 32;
+  doc.setTextColor(0,0,0);
+  doc.setFontSize(14);
+  doc.text("Rapport détaillé d’évaluation d’arbre d’agrément", 10, y);
+  y += 10;
+
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "bold");
+  doc.text("1. Informations client", 10, y);
+  y += 6;
+
+  y = drawTable(doc, 10, y, [60, 130], [
+    ["Champ", "Valeur"],
+    ["Client", valeurOuTiret("client")],
+    ["Email client", valeurOuTiret("emailClient")],
+    ["Adresse", valeurOuTiret("adresse")],
+    ["Espèce", valeurOuTiret("espece")],
+    ["Diamètre", valeurOuTiret("diametre") + " cm"]
+  ]);
+
+  doc.setFont("helvetica", "bold");
+  doc.text("2. Valeur de base Vb", 10, y);
+  y += 6;
+
+  let modeDetail = base.explication;
+  if (document.getElementById("modeBase").value === "formule") {
+    modeDetail += " (prix unitaire : " + (document.getElementById("prixUnitaire").value || "0") + ")";
+  }
+
+  y = drawTable(doc, 10, y, [70, 120], [
+    ["Élément", "Détail"],
+    ["Méthode", modeDetail],
+    ["Surface du tronc", base.surface.toFixed(2) + " cm²"],
+    ["Valeur de base Vb", base.vb + " €"]
+  ]);
+
+  doc.setFont("helvetica", "bold");
+  doc.text("3. Coefficients d’expertise", 10, y);
+  y += 6;
+
+  y = drawTable(doc, 10, y, [30, 40, 120], [
+    ["Coef.", "Valeur", "Description"],
+    ["S", document.getElementById("coefS").value, selectText("coefS")],
+    ["E", document.getElementById("coefE").value, selectText("coefE")],
+    ["L", document.getElementById("coefL").value, selectText("coefL")]
+  ]);
+
+  doc.setFont("helvetica", "bold");
+  doc.text("4. Calcul détaillé", 10, y);
+  y += 6;
+
+  y = drawTable(doc, 10, y, [70, 120], [
+    ["Étape", "Valeur"],
+    ["Formule", "VA = Vb × S × E × L"],
+    ["Valeur de base Vb", base.vb + " €"],
+    ["Coefficient S", document.getElementById("coefS").value],
+    ["Coefficient E", document.getElementById("coefE").value],
+    ["Coefficient L", document.getElementById("coefL").value],
+    ["Calcul final", base.vb + " × " + document.getElementById("coefS").value + " × " + document.getElementById("coefE").value + " × " + document.getElementById("coefL").value + " = " + valeurGlobale + " €"]
+  ]);
+
+  doc.setFillColor(241,248,233);
+  doc.setDrawColor(76,175,80);
+  doc.roundedRect(10, y, 190, 16, 3, 3, "FD");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(15);
+  doc.text("Valeur d’agrément retenue : " + valeurGlobale + " €", 105, y + 10, null, null, "center");
+  y += 24;
+
+  doc.setFontSize(12);
+  doc.text("5. Dégâts causés par l’homme", 10, y);
+  y += 6;
+
+  y = drawTable(doc, 10, y, [60, 130], [
+    ["Champ", "Valeur"],
+    ["Présence de dégâts", document.getElementById("degats").value],
+    ["Description", document.getElementById("desc").value || "Aucun dégât signalé"]
+  ]);
+
+  if (y > 220) {
+    doc.addPage();
+    y = 20;
+  }
+
+  doc.setFont("helvetica", "bold");
+  doc.text("6. Justification technique", 10, y);
+  y += 8;
+  doc.setFont("helvetica", "normal");
+  const comm = document.getElementById("commentaireArbre").value || "Aucune justification complémentaire renseignée.";
+  const commLines = doc.splitTextToSize(comm, 180);
+  doc.text(commLines, 10, y);
+  y += commLines.length * 6 + 8;
+
+  if (y > 220) {
+    doc.addPage();
+    y = 20;
+  }
+
+  doc.setFont("helvetica", "bold");
+  doc.text("7. Signature client", 10, y);
+  y += 6;
+  const sign = canvas.toDataURL("image/png");
+  doc.addImage(sign, "PNG", 10, y, 90, 35);
+  y += 45;
+
+  const files = document.getElementById("photos").files;
+  if (files.length > 0 && document.getElementById("degats").value === "Oui") {
+    doc.addPage();
+    let py = 20;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(14);
+    doc.text("8. Annexe photos des dégâts", 10, py);
+    py += 10;
+
+    for (let i = 0; i < files.length; i++) {
+      if (py > 230) {
+        doc.addPage();
+        py = 20;
+      }
+      const imgData = await fileToDataURL(files[i]);
+      doc.addImage(imgData, "JPEG", 10, py, 60, 45);
+      py += 50;
+    }
+  }
+
+  const totalPages = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "italic");
+    doc.text("Document généré par Arboryx — page " + i + "/" + totalPages, 105, 290, null, null, "center");
+  }
+
+  doc.save("rapport_arboryx.pdf");
+}
+
+async function envoyer() {
+  calculer();
+
+  const emailClient = document.getElementById("emailClient").value.trim();
+  if (!emailClient) {
+    alert("Veuillez renseigner l’email du client.");
+    return;
+  }
+
+  const base = calculValeurBase();
+
+  const paramsBase = {
+    client: document.getElementById("client").value || "-",
+    adresse: document.getElementById("adresse").value || "-",
+    espece: document.getElementById("espece").value || "-",
+    diametre: document.getElementById("diametre").value || "-",
+    valeur: valeurGlobale + " €",
+    degats: document.getElementById("degats").value || "Non",
+    description_degats: document.getElementById("desc").value || "-",
+    email_client: emailClient,
+    date_fiche: new Date().toLocaleDateString("fr-FR"),
+    methode_vb: base.explication,
+    valeur_base: base.vb + " €",
+    coefficient_s: document.getElementById("coefS").value,
+    coefficient_e: document.getElementById("coefE").value,
+    coefficient_l: document.getElementById("coefL").value,
+    commentaire: document.getElementById("commentaireArbre").value || "-",
+    surface_tronc: base.surface.toFixed(2) + " cm²",
+    formule_complete:
+      base.vb + " × " +
+      document.getElementById("coefS").value + " × " +
+      document.getElementById("coefE").value + " × " +
+      document.getElementById("coefL").value + " = " +
+      valeurGlobale + " €"
+  };
+
+  try {
+    await emailjs.send(
+      EMAIL_SERVICE_ID,
+      EMAIL_TEMPLATE_ID,
+      { ...paramsBase, to_email: emailClient }
+    );
+
+    await emailjs.send(
+      EMAIL_SERVICE_ID,
+      EMAIL_TEMPLATE_ID,
+      { ...paramsBase, to_email: EMAIL_PRO }
+    );
+
+    alert("Email envoyé au client + copie envoyée à toi.");
+  } catch (e) {
+    console.error(e);
+    alert("Erreur email. Vérifie dans EmailJS que To Email = {{to_email}}");
+  }
+}
+
+toggleModeBase();
+toggleDegats();
+resizeCanvas();
+calculer();
+majResume();
+</script>
+
+</body>
+</html>
